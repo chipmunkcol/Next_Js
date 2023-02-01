@@ -74,6 +74,7 @@
     - request -> /some-route -> return pre-rendered page(Good for SEO!) -> Hydrate with React code once loaded -> Page / App is interactive
     -> Two forms of pre-rendering
         Static Generation / Server-side rendering
+
     1-1) Static Generation 방법 _build 프로세스 중에 pre-rendering함
      export async function getStaticProps() {
          const DUMMY_MOVIE = await fetch('/api/movies').then((res) => res.json())
@@ -85,24 +86,27 @@
         }
      }
      // 요렇게 해주면 movie 정보가 들은 props를 해당 page의 컴포넌트가 받을수 있음 useEffect를 통해 컴포넌트 마운트 후 movie 정보를 받은게 아니기 때문에 SEO가 가능해진다😮
+
     1-2) getStaticPath 같이 써야하는듯
-    export async function getStaticPath() {
+    export async function getStaticPath(context) {
+
+        const movieId = context.params.movieId
+
+        const client = await MongoClient.connect('MongodbUrl');
+        
+        const db = client.db();
+        
+        const moviesCollection = db.collection('movie');
+
+        const movies = await moviesCollection.find().toArray();
+
+        client.close();
+
         return {
             fallback: false,
-            path: [
-                {
-                    params: {
-                        movieId: 'm1'
-                    },
-                },
-                {
-                    params: {
-                        movieId: 'm2'
-                    },
-                },
-            ]
-        }
-         
+            path: movies.map(movie => ({ params: { movieId: movie._id.toString() }, 
+            }))
+        };
     }
 
      2) Server-side rendering 방법(자주 바뀌는 api 의 경우 실시간 반영)
@@ -129,5 +133,16 @@
     }
 
     export default handler;
+
+8. Head 태그
+    import Head from 'next/head';
+    
+    <Head>
+        <title>타이틀</title>
+        <meta 
+            name="Google에 노출할 이름"
+            content="Google에 노출할 description"
+        />
+    </Head>
 
     
